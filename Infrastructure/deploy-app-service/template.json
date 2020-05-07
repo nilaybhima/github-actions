@@ -1,0 +1,347 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": {
+      "type": "string",
+      "defaultValue": "github-actions",
+      "metadata": {
+        "description": "Name of the Project"
+      }
+    },
+    "environmentSuffix": {
+      "type": "string"
+    },
+    "namePrefix": {
+      "defaultValue": "z",
+      "type": "string"
+    },
+    "nameSuffix": {
+      "defaultValue": "portal",
+      "type": "string"
+    },
+    "locationSuffix": {
+      "defaultValue": "ae",
+      "type": "string",
+      "metadata": {
+        "description": "This will be used for the naming convention of the resources deployed from this template"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "slots": {
+      "defaultValue": [
+        "offline"
+      ],
+      "type": "array",
+      "metadata": {
+        "description": "Array with the names for the environment slots"
+      },
+      "maxLength": 5
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "[concat('storage', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "The name of Storage Account."
+      }
+    },
+    "diagnosticsLogsLevel": {
+      "type": "string",
+      "defaultValue": "Warning",
+      "allowedValues": [
+        "Verbose",
+        "Information",
+        "Warning",
+        "Error"
+      ],
+      "metadata": {
+        "description": "The degree of severity for diagnostics logs."
+      }
+    },
+    "diagnosticsLogsRetentionInDays": {
+      "type": "int",
+      "defaultValue": 400,
+      "metadata": {
+        "description": "Number of days for which the diagnostics logs will be retained."
+      }
+    },
+    "appInsightsName": {
+      "defaultValue": "z-mysc-portal-ai-eus-st",
+      "type": "string",
+      "metadata": {
+        "description": "App Insights for the App Service"
+      }
+    },
+    "resourceGroupForAppInsights": {
+      "defaultValue": "z-mysc-portal-rg-ae-qa",
+      "type": "string",
+      "metadata": {
+        "description": "Env Name for App Settings"
+      }
+    },
+    "sniHostEnabledSslName": {
+      "defaultValue": "my-pp.ts.southerncross.co.nz",
+      "type": "string",
+      "metadata": {
+        "description": "Name of the host for sniEnabled State"
+      }
+    },
+    "oidcAuthorityUrl": {
+      "defaultValue": "http://identity-pp.southerncross.co.nz",
+      "type": "string",
+      "metadata": {
+        "description": "OIDCAuthority Url for App Settings"
+      }
+    },
+    "vaultUrl": {
+      "defaultValue": "http://z-mysc-portal-kv-ae-qa.vault.azure.net",
+      "type": "string",
+      "metadata": {
+        "description": "OIDCAuthority Url for App Settings"
+      }
+    },
+    "envAppSettingsName": {
+      "defaultValue": "stage",
+      "type": "string",
+      "metadata": {
+        "description": "Env Name for App Settings"
+      }
+    }
+  },
+  "variables": {
+    "siteName": "[concat(parameters('namePrefix'),'-', parameters('name'),'-', parameters('nameSuffix'),'-as-', parameters('locationSuffix'), '-', parameters('environmentSuffix'))]",
+    "hostName": "[concat(variables('siteName'), '.azurewebsites.net')]",
+    "servicePlanName": "[concat(parameters('namePrefix'),'-', parameters('name'),'-', parameters('nameSuffix'),'-asp-', parameters('locationSuffix'), '-', parameters('environmentSuffix'))]",
+    "servicePlanId": "[resourceId(resourceGroup().name, 'Microsoft.Web/serverfarms', variables('servicePlanName'))]",
+    "blobContainerName": "[toLower(concat(variables('siteName'), '-logs'))]",
+    "listAccountSasRequestContent": {
+      "signedServices": "bfqt",
+      "signedPermission": "rwdlacup",
+      "signedStart": "2019-03-01T00:00:00Z",
+      "signedExpiry": "2218-10-30T00:00:00Z",
+      "signedResourceTypes": "sco"
+    }
+  },
+  "resources": [
+    {
+      "apiVersion": "2018-02-01",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "resources": [
+        {
+          "name": "[concat('default/', variables('blobContainerName'))]",
+          "type": "blobServices/containers",
+          "apiVersion": "2018-02-01",
+          "dependsOn": [
+            "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+          ],
+          "properties": {
+            "publicAccess": "Blob"
+          }
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "kind": "app",
+      "name": "[variables('siteName')]",
+      "apiVersion": "2015-08-01",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "tags": {
+        "Application": "[parameters('name')]",
+        "Environment": "[parameters('environmentSuffix')]"
+      },
+      "scale": null,
+      "properties": {
+        "enabled": true,
+        "hostNameSslStates": [
+          {
+            "name": "[parameters('sniHostEnabledSslName')]",
+            "sslState": "Disabled",
+            "hostType": "Standard"
+          }
+        ],
+        "serverFarmId": "[variables('servicePlanId')]"
+      },
+      "dependsOn": [],
+      "resources": [
+        {
+          "apiVersion": "2018-02-01",
+          "type": "config",
+          "name": "web",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('siteName'))]"
+          ],
+          "properties": {
+            "numberOfWorkers": 1,
+            "httpLoggingEnabled": true,
+            "scmType": "VSTSRM",
+            "phpVersion": "off",
+            "httpVersion": "2.0",
+            "clientAffinityEnabled": true,
+            "use32BitWorkerProcess": false,
+            "alwaysOn": true,
+            "ftpsState": "Disabled",
+            "http20Enabled": true,
+            "defaultDocuments": [],
+            "remoteDebuggingEnabled": false,
+            "requestTracingEnabled": false
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('siteName'))]"
+          ],
+          "properties": {
+            "MSDEPLOY_RENAME_LOCKED_FILES": "1",
+            "ASPNETCORE_ENVIRONMENT": "[parameters('environmentSuffix')]",
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId(parameters('resourceGroupForAppInsights'), 'Microsoft.Insights/components', parameters('appInsightsName')), '2014-04-01').InstrumentationKey]",
+            "ApplicationInsights:InstrumentationKey": "[reference(resourceId(parameters('resourceGroupForAppInsights'), 'Microsoft.Insights/components', parameters('appInsightsName')), '2014-04-01').InstrumentationKey]",
+            "env": "[parameters('envAppSettingsName')]",
+            "APPINSIGHTS_PROFILERFEATURE_VERSION": "1.0.0",
+            "APPINSIGHTS_SNAPSHOTFEATURE_VERSION": "1.0.0",
+            "ApplicationInsightsAgent_EXTENSION_VERSION": "~2",
+            "DiagnosticServices_EXTENSION_VERSION": "~3",
+            "InstrumentationEngine_EXTENSION_VERSION": "~1",
+            "SnapshotDebugger_EXTENSION_VERSION": "~1",
+            "XDT_MicrosoftApplicationInsights_BaseExtensions": "~1",
+            "XDT_MicrosoftApplicationInsights_Mode": "recommended"
+          }
+        },
+        {
+          "apiVersion": "2018-02-01",
+          "type": "config",
+          "name": "logs",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', variables('siteName'))]"
+          ],
+          "properties": {
+            "applicationLogs": {
+              "azureBlobStorage": {
+                "level": "[parameters('diagnosticsLogsLevel')]",
+                "sasUrl": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))).primaryEndpoints.blob, variables('blobContainerName'), '?', listAccountSas(parameters('storageAccountName'), '2018-02-01', variables('listAccountSasRequestContent')).accountSasToken)]",
+                "retentionInDays": "[parameters('diagnosticsLogsRetentionInDays')]"
+              },
+              "failedRequestsTracing": {
+                "enabled": true
+              },
+              "detailedErrorMessages": {
+                "enabled": true
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "Microsoft.ApplicationInsights.AzureWebSites",
+          "type": "siteextensions",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('siteName'))]",
+            "appsettings"
+          ],
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "apiVersion": "2016-08-01",
+      "type": "Microsoft.Web/sites/slots",
+      "name": "[concat(variables('siteName'), '/', parameters('slots')[copyIndex()])]",
+      "kind": "app",
+      "location": "[parameters('location')]",
+      "comments": "This specifies the web app slots.",
+      "tags": {
+        "Application": "[parameters('name')]",
+        "Environment": "[parameters('environmentSuffix')]"
+      },
+      "properties": {
+        "enabled": true,
+        "serverFarmId": "[variables('servicePlanId')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/Sites', variables('siteName'))]"
+      ],
+      "copy": {
+        "name": "appSlot",
+        "count": "[length(parameters('slots'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2016-08-01",
+          "type": "config",
+          "name": "web",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites/Slots', variables('siteName'), parameters('slots')[copyIndex()])]"
+          ],
+          "properties": {
+            "numberOfWorkers": 1,
+            "httpLoggingEnabled": true,
+            "scmType": "VSTSRM",
+            "phpVersion": "off",
+            "httpVersion": "2.0",
+            "clientAffinityEnabled": true,
+            "use32BitWorkerProcess": false,
+            "alwaysOn": true,
+            "ftpsState": "Disabled",
+            "http20Enabled": true,
+            "defaultDocuments": [],
+            "remoteDebuggingEnabled": false,
+            "requestTracingEnabled": false
+          }
+        },
+        {
+          "apiVersion": "2016-08-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites/Slots', variables('siteName'), parameters('slots')[copyIndex()])]"
+          ],
+          "properties": {
+            "MSDEPLOY_RENAME_LOCKED_FILES": "1",
+            "env": "[parameters('envAppSettingsName')]"
+          }
+        },
+        {
+          "apiVersion": "2018-02-01",
+          "type": "config",
+          "name": "logs",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites/Slots', variables('siteName'), parameters('slots')[copyIndex()])]"
+          ],
+          "properties": {
+            "applicationLogs": {
+              "azureBlobStorage": {
+                "level": "[parameters('diagnosticsLogsLevel')]",
+                "sasUrl": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))).primaryEndpoints.blob, variables('blobContainerName'), '?', listAccountSas(parameters('storageAccountName'), '2018-02-01', variables('listAccountSasRequestContent')).accountSasToken)]",
+                "retentionInDays": "[parameters('diagnosticsLogsRetentionInDays')]"
+              },
+              "failedRequestsTracing": {
+                "enabled": true
+              },
+              "detailedErrorMessages": {
+                "enabled": true
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
