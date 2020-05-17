@@ -14,7 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET Core
-      uses: baruchiro/github-actions@0.0.1
+      uses: actions/setup-dotnet@v1.4.0
+      with: 
+        dotnet-verison: 2.2.104
     - name: Install dependencies
       run: dotnet restore ./src/github.actions/github.actions
     - name: Build
