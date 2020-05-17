@@ -1,0 +1,27 @@
+name: .NET Core
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 2.0.9
+    - name: Install dependencies
+      run: dotnet restore ./src/github.actions/github.actions
+    - name: Build
+      run: dotnet build ./src/github.actions/github.actions/github.actions.csproj --configuration Release --no-restore
+    - name: Test
+      run: dotnet test --no-restore --verbosity normal
+    - name: npm build
+      run: npm install ./src/github.actions/github.actions/ClientApp
