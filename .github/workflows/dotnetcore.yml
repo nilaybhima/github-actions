@@ -25,3 +25,18 @@ jobs:
       run: dotnet test ./src/github.actions/github.actions.tests/github.actions.tests.csproj --no-restore --verbosity normal
     - name: npm build
       run: npm install ./src/github.actions/github.actions/ClientApp
+    - name: typescript build
+      run: npm install typescript@2.5.3
+    - name: typescript build
+      run: npm run tslint -p ./src/github.actions/github.actions/ClientApp
+    - name: npm build
+      run: npm run build ./src/github.actions/github.actions/ClientApp --env=prod
+    - name: publish
+      run: dotnet publish --output ./drop
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        # Artifact name
+        name: drop
+        # A file, directory or wildcard pattern that describes what to upload
+        path: ./drop
