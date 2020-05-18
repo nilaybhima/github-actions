@@ -9,19 +9,19 @@ on:
 jobs:
   build:
 
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 2.0.9
+      uses: actions/setup-dotnet@v1.4.0
+      with: 
+        dotnet-verison: 2.2.104
     - name: Install dependencies
       run: dotnet restore ./src/github.actions/github.actions
     - name: Build
       run: dotnet build ./src/github.actions/github.actions/github.actions.csproj --configuration Release --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test ./src/github.actions/github.actions.tests/github.actions.tests.csproj --no-restore --verbosity normal
     - name: npm build
       run: npm install ./src/github.actions/github.actions/ClientApp
