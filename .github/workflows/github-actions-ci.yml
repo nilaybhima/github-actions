@@ -27,8 +27,8 @@ jobs:
       run: npm install ./src/github.actions/github.actions/ClientApp
     - name: typescript lint
       run: |
-        npm install angular
         cd ./src/github.actions/github.actions/ClientApp
+        npm install angular
         npm run lint
     - name: npm build
       run: npm run build ./src/github.actions/github.actions/ClientApp/package.json --env=prod
