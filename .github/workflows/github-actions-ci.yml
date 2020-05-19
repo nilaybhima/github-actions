@@ -29,10 +29,6 @@ jobs:
         cd ./src/github.actions/github.actions/ClientApp
         npm install angular
         npm run lint
-    - name: npm build
-      run: |
-        cd ./src/github.actions/github.actions/ClientApp
-        npm run build --env=prod
     - name: publish
       run: dotnet publish ./src/github.actions/github.actions/github.actions.csproj --output ./drop
     - name: Upload a Build Artifact
