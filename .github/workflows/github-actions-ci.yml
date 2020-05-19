@@ -30,7 +30,9 @@ jobs:
         npm install angular
         npm run lint
     - name: npm build
-      run: npm run build ./src/github.actions/github.actions/ClientApp/package.json --env=prod
+      run: |
+        cd ./src/github.actions/github.actions/ClientApp
+        npm run build ./src/github.actions/github.actions/ClientApp/package.json --env=prod
     - name: publish
       run: dotnet publish --output ./drop
     - name: Upload a Build Artifact
