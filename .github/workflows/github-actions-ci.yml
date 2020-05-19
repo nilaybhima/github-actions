@@ -26,7 +26,7 @@ jobs:
     - name: npm build
       run: npm install ./src/github.actions/github.actions/ClientApp
     - name: typescript lint
-      run: npm run tslint -p ./src/github.actions/github.actions/ClientApp
+      run: npm run lint -p ./src/github.actions/github.actions/ClientApp
     - name: npm build
       run: npm run build ./src/github.actions/github.actions/ClientApp/package.json --env=prod
     - name: publish
