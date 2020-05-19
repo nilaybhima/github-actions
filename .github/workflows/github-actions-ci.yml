@@ -23,10 +23,9 @@ jobs:
       run: dotnet build ./src/github.actions/github.actions/github.actions.csproj --configuration Release --no-restore
     - name: Test
       run: dotnet test ./src/github.actions/github.actions.tests/github.actions.tests.csproj --no-restore --verbosity normal
-    - name: npm build
-      run: npm install ./src/github.actions/github.actions/ClientApp
     - name: typescript lint
       run: |
+        npm install ./src/github.actions/github.actions/ClientApp
         cd ./src/github.actions/github.actions/ClientApp
         npm install angular
         npm run lint
